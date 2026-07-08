@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ Chatbot</title>
+
+  <!-- ==================== CSS ==================== -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #1a1a3e, #24243e);
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      color: white;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 1.8rem;
+      background: linear-gradient(90deg, #c4b5fd, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .header p { color: #94a3b8; font-size: 0.9rem; }
+
+    /* ---- Chat Container ---- */
+    .chat-container {
+      width: 100%;
+      max-width: 700px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 560px;
+    }
+
+    /* ---- Chat Top Bar ---- */
+    .chat-topbar {
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bot-avatar {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .bot-info .bot-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .bot-info .bot-status {
+      font-size: 0.75rem;
+      color: #a5f3fc;
+    }
+    .online-dot {
+      width: 8px; height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    /* ---- Messages Area ---- */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+    }
+
+    /* ---- Individual Message ---- */
+    .message {
+      display: flex;
+      gap: 10px;
+      max-width: 85%;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Bot message — left side */
+    .message.bot { align-self: flex-start; }
+
+    .message.bot .msg-avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .message.bot .msg-bubble {
+      background: rgba(124,58,237,0.2);
+      border: 1px solid rgba(124,58,237,0.3);
+      color: #e2e8f0;
+      padding: 12px 16px;
+      border-radius: 0px 14px 14px 14px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    /* User message — right side */
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message.user .msg-avatar {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .message.user .msg-bubble {
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 14px 0px 14px 14px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    /* Confidence score tag */
+    .confidence {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-top: 5px;
+      padding-left: 4px;
+    }
+
+    /* ---- Typing Indicator ---- */
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 16px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 0px 14px 14px 14px;
+    }
+    .typing span {
+      width: 7px; height: 7px;
+      background: #a78bfa;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* ---- Suggested Questions ---- */
+    .suggestions {
+      padding: 10px 20px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .suggestions p {
+      width: 100%;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .suggestion-btn {
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #94a3b8;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggestion-btn:hover {
+      background: rgba(124,58,237,0.2);
+      color: #c4b5fd;
+      border-color: rgba(124,58,237,0.4);
+    }
+
+    /* ---- Input Row ---- */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.15);
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: Arial, sans-serif;
+      transition: border-color 0.2s;
+    }
+    #user-input:focus { border-color: rgba(124,58,237,0.6); }
+    #user-input::placeholder { color: #475569; }
+
+    #send-btn {
+      width: 46px; height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    #send-btn:hover { opacity: 0.85; }
+    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .footer {
+      margin-top: 14px;
+      color: #475569;
+      font-size: 0.75rem;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ==================== HTML ==================== -->
+
+  <div class="header">
+    <h1>🤖 FAQ Chatbot</h1>
+    <p>Ask me anything — I will find the best answer for you</p>
+  </div>
+
+  <div class="chat-container">
+
+    <!-- Top bar -->
+    <div class="chat-topbar">
+      <div class="bot-avatar">🤖</div>
+      <div class="bot-info">
+        <div class="bot-name">EduBot Assistant</div>
+        <div class="bot-status">
+          <span class="online-dot"></span>Online · NLP Powered
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="messages"></div>
+
+    <!-- Suggested questions -->
+    <div class="suggestions" id="suggestions">
+      <p>💡 Try asking:</p>
+      <button class="suggestion-btn" onclick="useSuggestion(this)">What courses do you offer?</button>
+      <button class="suggestion-btn" onclick="useSuggestion(this)">How do I reset my password?</button>
+      <button class="suggestion-btn" onclick="useSuggestion(this)">What are your timings?</button>
+      <button class="suggestion-btn" onclick="useSuggestion(this)">How to contact support?</button>
+    </div>
+
+    <!-- Input -->
+    <div class="input-row">
+      <input
+        type="text"
+        id="user-input"
+        placeholder="Type your question here..."
+        onkeydown="if(event.key==='Enter') sendMessage()"
+      />
+      <button id="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Uses Cosine Similarity NLP · No API Key · Runs Fully in Browser
+  </div>
+
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+
+    // ==========================================================
+    // STEP 1: FAQ DATABASE
+    // This is our list of questions and answers
+    // The chatbot will search through these to find best match
+    // ==========================================================
+    const FAQ_DATA = [
+      {
+        question: "What courses do you offer?",
+        answer: "We offer courses in Web Development, Data Science, Artificial Intelligence, Cybersecurity, Mobile App Development, and Cloud Computing. All courses are available online and offline."
+      },
+      {
+        question: "How do I enroll in a course?",
+        answer: "To enroll, visit our website, choose your course, click 'Enroll Now', create an account, and complete the payment. You will get instant access to course material."
+      },
+      {
+        question: "What are your working hours or timings?",
+        answer: "We are available Monday to Saturday, from 9:00 AM to 6:00 PM IST. Our support team responds within 24 hours on working days."
+      },
+      {
+        question: "How do I reset my password?",
+        answer: "Click on 'Forgot Password' on the login page. Enter your registered email address. You will receive a password reset link within 2 minutes. Check your spam folder if you don't see it."
+      },
+      {
+        question: "How do I contact support?",
+        answer: "You can contact our support team via email at support@edubot.com, call us at +91-9876543210, or use the live chat option on our website. We typically respond within 2 hours."
+      },
+      {
+        question: "Is there a free trial available?",
+        answer: "Yes! We offer a 7-day free trial for all our courses. No credit card is required. You get full access to course videos, assignments, and quizzes during the trial period."
+      },
+      {
+        question: "What is the course fee or price?",
+        answer: "Course fees range from ₹999 to ₹9,999 depending on the course duration and content. We also offer EMI options and scholarships for deserving students."
+      },
+      {
+        question: "Do you provide a certificate after completion?",
+        answer: "Yes, we provide an industry-recognized certificate upon successful completion of the course. The certificate can be shared on LinkedIn and is verified by our platform."
+      },
+      {
+        question: "Can I access course material offline?",
+        answer: "Yes, you can download course videos and notes for offline access through our mobile app. Downloaded content is available for 30 days."
+      },
+      {
+        question: "What programming languages are taught?",
+        answer: "We teach Python, JavaScript, Java, C++, HTML, CSS, SQL, and R. Each course focuses on the most relevant language for that domain."
+      },
+      {
+        question: "How long does it take to complete a course?",
+        answer: "Course duration ranges from 4 weeks to 6 months depending on the course. You can learn at your own pace as all content is available 24/7."
+      },
+      {
+        question: "Is there any placement assistance?",
+        answer: "Yes! We have a dedicated placement cell that helps students with resume building, mock interviews, and connecting with 200+ hiring partners across India."
+      },
+      {
+        question: "Can I get a refund?",
+        answer: "Yes, we offer a full refund within 7 days of purchase if you are not satisfied. After 7 days, a partial refund of 50% is available up to 30 days."
+      },
+      {
+        question: "Do you offer group or corporate training?",
+        answer: "Yes, we offer special corporate training packages for teams of 5 or more. Contact us at corporate@edubot.com for custom pricing and course plans."
+      },
+      {
+        question: "How do I track my course progress?",
+        answer: "You can track your progress from the 'My Dashboard' section after logging in. It shows completed modules, quiz scores, and estimated time to complete the course."
+      },
+      {
+        question: "Are the instructors qualified?",
+        answer: "All our instructors are industry professionals with minimum 5 years of experience. They are certified experts from companies like Google, Microsoft, and Amazon."
+      },
+      {
+        question: "What if I miss a live class?",
+        answer: "All live classes are recorded and uploaded within 2 hours. You can watch the recording anytime from your dashboard. No content is missed."
+      },
+      {
+        question: "Do you have a mobile app?",
+        answer: "Yes! Our mobile app is available on both Android and iOS. Download it from Google Play Store or Apple App Store by searching 'EduBot Learning'."
+      },
+      {
+        question: "How many students have enrolled so far?",
+        answer: "Over 50,000 students have enrolled in our courses from 30+ countries. We have a 4.8 star rating on Google with 10,000+ positive reviews."
+      },
+      {
+        question: "What is your privacy policy?",
+        answer: "We take privacy seriously. We never sell your personal data to third parties. All data is encrypted and stored securely. Read our full privacy policy at edubot.com/privacy."
+      }
+    ];
+
+
+    // ==========================================================
+    // STEP 2: TEXT PREPROCESSING (NLP Step)
+    // Clean the text before comparing
+    // This is the "tokenize and clean" step mentioned in your task
+    // ==========================================================
+    function preprocessText(text) {
+      // Convert to lowercase
+      text = text.toLowerCase();
+
+      // Remove punctuation like ? ! . , ; :
+      text = text.replace(/[^\w\s]/g, "");
+
+      // Remove extra spaces
+      text = text.trim();
+
+      // Split into individual words (tokens)
+      const tokens = text.split(/\s+/);
+
+      // Remove stopwords — common words that don't carry meaning
+      const stopwords = ["i","me","my","the","a","an","is","are","was","were",
+        "do","does","did","will","would","can","could","shall","should",
+        "have","has","had","be","been","being","to","of","in","on","at",
+        "for","with","about","what","how","when","where","who","which",
+        "this","that","these","those","and","or","but","if","then","so",
+        "your","our","their","its","we","you","he","she","they","it"];
+
+      const filtered = tokens.filter(word => !stopwords.includes(word) && word.length > 0);
+
+      return filtered;
+    }
+
+
+    // ==========================================================
+    // STEP 3: COSINE SIMILARITY (The AI/NLP matching formula)
+    // This checks how similar two sentences are
+    // Score closer to 1 = very similar
+    // Score closer to 0 = very different
+    // ==========================================================
+    function cosineSimilarity(tokens1, tokens2) {
+
+      // Build a combined vocabulary of all unique words
+      const allWords = [...new Set([...tokens1, ...tokens2])];
+
+      // Create word frequency vectors
+      // Vector = count of how many times each word appears
+      function buildVector(tokens) {
+        const vector = {};
+        allWords.forEach(word => vector[word] = 0);
+        tokens.forEach(word => {
+          if (vector[word] !== undefined) vector[word]++;
+        });
+        return vector;
+      }
+
+      const vec1 = buildVector(tokens1);
+      const vec2 = buildVector(tokens2);
+
+      // Calculate dot product (multiply matching words)
+      let dotProduct = 0;
+      allWords.forEach(word => {
+        dotProduct += vec1[word] * vec2[word];
+      });
+
+      // Calculate magnitude (length) of each vector
+      const mag1 = Math.sqrt(allWords.reduce((sum, w) => sum + vec1[w] * vec1[w], 0));
+      const mag2 = Math.sqrt(allWords.reduce((sum, w) => sum + vec2[w] * vec2[w], 0));
+
+      // Avoid divide by zero
+      if (mag1 === 0 || mag2 === 0) return 0;
+
+      // Final cosine similarity score
+      return dotProduct / (mag1 * mag2);
+    }
+
+
+    // ==========================================================
+    // STEP 4: FIND BEST MATCHING FAQ
+    // Compare user question with ALL FAQs
+    // Return the one with highest similarity score
+    // ==========================================================
+    function findBestMatch(userQuestion) {
+      const userTokens = preprocessText(userQuestion);
+
+      let bestScore = 0;
+      let bestFAQ = null;
+
+      // Loop through every FAQ and calculate similarity
+      FAQ_DATA.forEach(faq => {
+        const faqTokens = preprocessText(faq.question);
+        const score = cosineSimilarity(userTokens, faqTokens);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestFAQ = faq;
+        }
+      });
+
+      return { faq: bestFAQ, score: bestScore };
+    }
+
+
+    // ==========================================================
+    // STEP 5: CHAT UI FUNCTIONS
+    // Display messages on screen
+    // ==========================================================
+
+    // Add a message bubble to chat
+    function addMessage(text, sender, confidence) {
+      const messagesDiv = document.getElementById("messages");
+
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "message " + sender;
+
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = sender === "bot" ? "🤖" : "👤";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = text;
+
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(bubble);
+
+      // Show confidence score for bot messages
+      if (sender === "bot" && confidence !== undefined) {
+        const confDiv = document.createElement("div");
+        confDiv.className = "confidence";
+        const percent = Math.round(confidence * 100);
+        confDiv.textContent = "Match confidence: " + percent + "%";
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(bubble);
+        wrapper.appendChild(confDiv);
+        messageDiv.innerHTML = "";
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(wrapper);
+      }
+
+      messagesDiv.appendChild(messageDiv);
+
+      // Auto scroll to bottom
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Show typing animation
+    function showTyping() {
+      const messagesDiv = document.getElementById("messages");
+      const typingDiv = document.createElement("div");
+      typingDiv.className = "message bot";
+      typingDiv.id = "typing-indicator";
+      typingDiv.innerHTML = `
+        <div class="msg-avatar">🤖</div>
+        <div class="typing">
+          <span></span><span></span><span></span>
+        </div>`;
+      messagesDiv.appendChild(typingDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Remove typing animation
+    function removeTyping() {
+      const typingDiv = document.getElementById("typing-indicator");
+      if (typingDiv) typingDiv.remove();
+    }
+
+    // When user clicks a suggestion button
+    function useSuggestion(btn) {
+      document.getElementById("user-input").value = btn.textContent;
+      sendMessage();
+    }
+
+    // ==========================================================
+    // STEP 6: MAIN SEND MESSAGE FUNCTION
+    // This runs when user clicks Send or presses Enter
+    // ==========================================================
+    function sendMessage() {
+      const inputBox = document.getElementById("user-input");
+      const userText = inputBox.value.trim();
+
+      if (!userText) return;
+
+      // Clear input
+      inputBox.value = "";
+
+      // Show user message
+      addMessage(userText, "user");
+
+      // Hide suggestion buttons after first message
+      document.getElementById("suggestions").style.display = "none";
+
+      // Show typing animation for 1 second (feels natural)
+      showTyping();
+
+      setTimeout(function () {
+        removeTyping();
+
+        // Find best matching FAQ
+        const result = findBestMatch(userText);
+
+        // If confidence is too low, say we don't know
+        if (result.score < 0.1) {
+          addMessage(
+            "I'm sorry, I couldn't find a relevant answer to your question. Could you rephrase it? You can also contact support at support@edubot.com",
+            "bot",
+            result.score
+          );
+        } else {
+          addMessage(result.faq.answer, "bot", result.score);
+        }
+
+      }, 1000);
+    }
+
+
+    // ==========================================================
+    // STEP 7: SHOW WELCOME MESSAGE WHEN PAGE LOADS
+    // ==========================================================
+    window.onload = function () {
+      setTimeout(function () {
+        addMessage(
+          "👋 Hello! I am EduBot, your FAQ assistant. I use NLP and Cosine Similarity to understand your questions. Ask me anything about our courses, fees, support, or enrollment!",
+          "bot"
+        );
+      }, 400);
+    };
+
+  </script>
+  <!-- ==================== JAVASCRIPT END ==================== -->
+
+</body>
+</html>
